@@ -1,0 +1,17 @@
+{
+    "welcome": "Bienvenue",
+    "login.title": "Se connecter",
+    "login.description": "Veuillez vous connecter à votre compte",
+    "login.email": "Adresse e-mail",
+    "login.emailPlaceholder": "exemple@domaine.com",
+    "login.password": "Mot de passe",
+    "login.submit": "Se connecter",
+    "login.noAccount": "Vous n'avez pas encore un compte ?",
+    "login.signUp": "S'inscrire",
+    "login.google": "Continuer avec Google",
+    "login.facebook": "Continuer avec Facebook",
+    "login.errors.invalidCredentials": "Identifiants invalides",
+    "login.errors.generic": "Une erreur s'est produite lors du connexion",
+    "login.errors.network": "Problème de réseau"
+  }
+  

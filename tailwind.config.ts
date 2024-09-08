@@ -7,11 +7,20 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    screens: {
+      sm: '640px',  // Small devices (phones)
+      md: '768px',  // Medium devices (tablets)
+      lg: '1024px', // Large devices (desktops)
+      xl: '1280px', // Extra large devices (large desktops)
+      '2xl': '1536px', // 2X extra large devices
+    },
     extend: {
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+      colors: {
+        primary: '#5483BF', // Example primary color
+        secondary: '#3C5FA6', // Example secondary color
+        accent: '#3F4C73', // Example accent color
+        background: '#F2F2F2', // Light background color
+        foreground: '#1A3073', // Dark foreground color
       },
     },
   },
