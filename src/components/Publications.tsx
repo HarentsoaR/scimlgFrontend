@@ -1,92 +1,166 @@
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react"
-import PublicationModal from "./PublicationModal"
-import NewPublicationModal from "./NewPublicationModal"
-import ApprovalModal from "./ApprovalModal"
+import { useEffect, useState } from "react";
+import axios from "axios"; // Import Axios
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Filter, BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import PublicationModal from "./PublicationModal";
+import NewPublicationModal from "./NewPublicationModal";
+import ApprovalModal from "./ApprovalModal";
+import { parseCookies } from "nookies";
+
+interface User {
+  id: number;
+  name: string;
+}
+
+interface Comment {
+  id: number;
+  content: string;
+  user: User;
+}
 
 interface Publication {
-  id: number
-  title: string
-  author: string
-  date: string
-  content: string
-  likes: number
-  comments: number
-  status: 'pending' | 'approved' | 'rejected'
+  id: number;
+  title: string;
+  content: string;
+  status: 'pending' | 'approved' | 'rejected' | 'under_review';
+  createdAt: string;
+  updatedAt: string;
+  user: User;
+  evaluations: any[]; // You can define this more specifically if needed
+  comments: Comment[];
 }
 
 export default function Publications() {
-  const [publications, setPublications] = useState<Publication[]>([
-    { id: 1, title: "Biodiversity in Madagascar's Rainforests", author: "Dr. Rakoto", date: "2023-05-15", content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.", likes: 45, comments: 12, status: 'approved' },
-    { id: 2, title: "Climate Change Effects on Endemic Species", author: "Prof. Ratsimbazafy", date: "2023-06-02", content: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.", likes: 38, comments: 9, status: 'pending' },
-    { id: 3, title: "Sustainable Agriculture Practices in Madagascar", author: "Dr. Razafindrakoto", date: "2023-06-20", content: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.", likes: 52, comments: 15, status: 'pending' },
-    { id: 4, title: "Conservation Efforts for Lemurs", author: "Dr. Rasoloarison", date: "2023-07-05", content: "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos.", likes: 60, comments: 20, status: 'approved' },
-  ])
+  const [publications, setPublications] = useState<Publication[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [selectedPublication, setSelectedPublication] = useState<Publication | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewPublicationModalOpen, setIsNewPublicationModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const itemsPerPage = 3;
 
-  const [currentPage, setCurrentPage] = useState(1)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
-  const [selectedPublication, setSelectedPublication] = useState<Publication | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isNewPublicationModalOpen, setIsNewPublicationModalOpen] = useState(false)
-  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false)
-  const itemsPerPage = 3 // Changed from 5 to 3 to demonstrate pagination with 4 items
+  useEffect(() => {
+    fetchPublications();
+  }, []);
+
+  const fetchPublications = async () => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
+
+    try {
+      const response = await axios.get('http://localhost:8080/articles', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setPublications(response.data);
+    } catch (error) {
+      console.error('Error fetching publications:', error);
+    }
+  };
 
   const filteredPublications = publications.filter(pub =>
     (pub.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pub.author.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      pub.user.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
     (statusFilter === 'all' || pub.status === statusFilter)
-  )
+  );
 
-  const totalPages = Math.ceil(filteredPublications.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentPublications = filteredPublications.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(filteredPublications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPublications = filteredPublications.slice(startIndex, endIndex);
 
   const handleReadClick = (publication: Publication) => {
-    setSelectedPublication(publication)
-    setIsModalOpen(true)
-  }
+    setSelectedPublication(publication);
+    setIsModalOpen(true);
+  };
 
   const handleApprovalClick = (publication: Publication) => {
-    setSelectedPublication(publication)
-    setIsApprovalModalOpen(true)
-  }
+    setSelectedPublication(publication);
+    setIsApprovalModalOpen(true);
+  };
 
   const handleNewPublication = (newPublication: { title: string; content: string }) => {
     const publication: Publication = {
       id: publications.length + 1,
       title: newPublication.title,
-      author: "Current User", // Replace with actual user name
-      date: new Date().toISOString().split('T')[0],
       content: newPublication.content,
-      likes: 0,
-      comments: 0,
-      status: 'pending'
+      user: { id: 0, name: "Current User" }, // Replace with actual user name
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'pending',
+      evaluations: [],
+      comments: []
+    };
+    setPublications([publication, ...publications]);
+  };
+
+  const handleApprove = async (id: number) => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
+
+    try {
+      const response = await axios.patch(`http://localhost:8080/articles/${id}/approve`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 200) {
+        setPublications(publications.map(pub =>
+          pub.id === id ? { ...pub, status: 'approved' } : pub
+        ));
+        setIsApprovalModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error approving publication:', error);
     }
-    setPublications([publication, ...publications])
-  }
+  };
 
-  const handleApprove = (id: number) => {
-    setPublications(publications.map(pub =>
-      pub.id === id ? { ...pub, status: 'approved' } : pub
-    ))
-    setIsApprovalModalOpen(false)
-  }
+  const handleReject = async (id: number) => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
 
-  const handleReject = (id: number) => {
-    setPublications(publications.map(pub =>
-      pub.id === id ? { ...pub, status: 'rejected' } : pub
-    ))
-    setIsApprovalModalOpen(false)
-  }
+    try {
+      const response = await axios.patch(`http://localhost:8080/articles/${id}/reject`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 200) {
+        setPublications(publications.map(pub =>
+          pub.id === id ? { ...pub, status: 'rejected' } : pub
+        ));
+        setIsApprovalModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error rejecting publication:', error);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-500 text-white';
+      case 'pending':
+        return 'bg-yellow-500 text-white';
+      case 'rejected':
+        return 'bg-red-500 text-white';
+      case 'under_review':
+        return 'bg-blue-500 text-white';
+      default:
+        return 'bg-gray-500 text-white';
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -124,21 +198,28 @@ export default function Publications() {
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
                     <Avatar>
-                      <AvatarFallback>{pub.author[0]}</AvatarFallback>
+                      <AvatarFallback>{pub.user.name[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-grow">
                       <h3 className="text-lg font-semibold">{pub.title}</h3>
-                      <p className="text-sm text-muted-foreground">{pub.author} • {pub.date}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {pub.user.name} • {new Date(pub.createdAt).toLocaleDateString()} at {new Date(pub.createdAt).toLocaleTimeString()}
+                      </p>
                     </div>
-                    <Badge variant={pub.status === 'approved' ? 'default' : pub.status === 'pending' ? 'secondary' : 'destructive'}>
-                      {pub.status}
+                    <Badge
+                      className={getStatusColor(pub.status)}
+                      onClick={pub.status === 'pending' ? () => handleApprovalClick(pub) : undefined}
+                      style={pub.status === 'pending' ? { cursor: 'pointer' } : {}}
+                    >
+                      {pub.status === 'under_review' ? 'Pending' : pub.status}
                     </Badge>
                     <Button variant="ghost" size="sm" onClick={() => handleReadClick(pub)}>
                       <BookOpen className="h-4 w-4 mr-2" />
                       Read
                     </Button>
-                    {pub.status === 'pending' && (
-                      <Button variant="outline" size="sm" onClick={() => handleApprovalClick(pub)}>
+                    {pub.status === 'under_review' && (
+                      <Button variant="ghost" size="sm" onClick={() => handleApprovalClick(pub)}>
+                        <BookOpen className="h-4 w-4 mr-2" />
                         Review
                       </Button>
                     )}
@@ -146,11 +227,11 @@ export default function Publications() {
                   <div className="flex items-center space-x-4 mt-4 text-sm text-muted-foreground">
                     <span className="flex items-center">
                       <ThumbsUp className="h-4 w-4 mr-1" />
-                      {pub.likes} Likes
+                      {pub.evaluations.length} Likes
                     </span>
                     <span className="flex items-center">
                       <MessageSquare className="h-4 w-4 mr-1" />
-                      {pub.comments} Comments
+                      {pub.comments.length} Comments
                     </span>
                   </div>
                 </CardContent>
@@ -200,5 +281,5 @@ export default function Publications() {
         onReject={handleReject}
       />
     </div>
-  )
+  );
 }

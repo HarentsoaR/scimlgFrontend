@@ -35,11 +35,11 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({ publication, isOpen, onCl
         <div className="mt-4">
           <div className="flex items-center space-x-2">
             <Avatar>
-              <AvatarFallback>{publication.author[0]}</AvatarFallback>
+              <AvatarFallback>{publication.user.name[0]}</AvatarFallback>
             </Avatar>
             <div>
               <h3 className="text-lg font-semibold">{publication.title}</h3>
-              <p className="text-sm text-muted-foreground">{publication.author} • {publication.date}</p>
+              <p className="text-sm text-muted-foreground">{publication.user.name} • {new Date(publication.createdAt).toLocaleDateString()} at {new Date(publication.createdAt).toLocaleTimeString()}</p>
             </div>
           </div>
           <ScrollArea className="mt-4 max-h-[60vh]">
