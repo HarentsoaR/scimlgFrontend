@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import axios from "axios"; // Import Axios
+import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import PublicationModal from "./PublicationModal";
 import NewPublicationModal from "./NewPublicationModal";
 import ApprovalModal from "./ApprovalModal";
@@ -32,8 +31,9 @@ interface Publication {
   createdAt: string;
   updatedAt: string;
   user: User;
-  evaluations: any[]; // You can define this more specifically if needed
+  evaluations: any[];
   comments: Comment[];
+  likes: number; // Change likes to a number
 }
 
 export default function Publications() {
@@ -61,9 +61,37 @@ export default function Publications() {
           Authorization: `Bearer ${token}`,
         },
       });
-      setPublications(response.data);
+
+      // Ensure likes is a number
+      const publicationsWithLikes = response.data.map((pub: Publication) => ({
+        ...pub,
+        likes: typeof pub.likes === 'number' ? pub.likes : 0, // Set likes to 0 if it's not a number
+      }));
+
+      setPublications(publicationsWithLikes);
     } catch (error) {
       console.error('Error fetching publications:', error);
+    }
+  };
+
+  const handleLikePublication = async (id: number) => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
+
+    try {
+      const response = await axios.post(`http://localhost:8080/likes/${id}`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Update the publications state with the new likes count
+      setPublications(publications.map(pub =>
+        pub.id === id ? { ...pub, likes: typeof response.data.likes === 'number' ? response.data.likes : 0 } : pub // Ensure likes is a number
+      ));
+      fetchPublications()
+    } catch (error) {
+      console.error('Error liking publication:', error);
     }
   };
 
@@ -98,7 +126,8 @@ export default function Publications() {
       updatedAt: new Date().toISOString(),
       status: 'pending',
       evaluations: [],
-      comments: []
+      comments: [],
+      likes: 0 // Initialize likes as 0
     };
     setPublications([publication, ...publications]);
   };
@@ -194,7 +223,7 @@ export default function Publications() {
           </div>
           <ScrollArea className="h-[calc(100vh-300px)]">
             {currentPublications.map((pub) => (
-              <Card key={pub.id} className="mb-4 hover:bg-accent transition-colors">
+              <Card key={pub.id} className="mb-4 hover:bg-gray-600 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
                     <Avatar>
@@ -206,38 +235,26 @@ export default function Publications() {
                         {pub.user.name} • {new Date(pub.createdAt).toLocaleDateString()} at {new Date(pub.createdAt).toLocaleTimeString()}
                       </p>
                     </div>
-                    <Badge
-                      className={getStatusColor(pub.status)}
-                      onClick={pub.status === 'pending' ? () => handleApprovalClick(pub) : undefined}
-                      style={pub.status === 'pending' ? { cursor: 'pointer' } : {}}
-                    >
-                      {pub.status === 'under_review' ? 'Pending' : pub.status}
-                    </Badge>
                     <Button variant="ghost" size="sm" onClick={() => handleReadClick(pub)}>
                       <BookOpen className="h-4 w-4 mr-2" />
                       Read
                     </Button>
-                    {pub.status === 'under_review' && (
-                      <Button variant="ghost" size="sm" onClick={() => handleApprovalClick(pub)}>
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Review
-                      </Button>
-                    )}
                   </div>
-                  <div className="flex items-center space-x-4 mt-4 text-sm text-muted-foreground">
-                    <span className="flex items-center">
-                      <ThumbsUp className="h-4 w-4 mr-1" />
-                      {pub.evaluations.length} Likes
-                    </span>
-                    <span className="flex items-center">
-                      <MessageSquare className="h-4 w-4 mr-1" />
-                      {pub.comments.length} Comments
-                    </span>
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <Button variant="ghost" size="sm" className="flex items-center space-x-1" onClick={() => handleLikePublication(pub.id)}>
+                      <ThumbsUp className="w-4 h-4" />
+                      <span>{pub.likeCounts} Likes</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex items-center space-x-1">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>{pub.comments.length} Comments</span>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </ScrollArea>
+
           <div className="flex justify-between items-center mt-4">
             <Button
               variant="outline"
