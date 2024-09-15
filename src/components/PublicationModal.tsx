@@ -1,13 +1,14 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ThumbsUp, MessageSquare } from "lucide-react";
+import { Input } from './ui/input';
+import { ThumbsUp, MessageSquare, Send } from "lucide-react";
 import { parseCookies } from "nookies";
 
 interface User {
@@ -38,13 +39,15 @@ interface PublicationModalProps {
   publication: Publication | null;
   isOpen: boolean;
   onClose: () => void;
+  onPublish: () => void;
 }
 
-export default function PublicationModal({ publication, isOpen, onClose }: PublicationModalProps) {
+export default function PublicationModal({ publication, isOpen, onClose, onPublish }: PublicationModalProps) {
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLikesModalOpen, setIsLikesModalOpen] = useState(false);
   const [likedUsers, setLikedUsers] = useState<User[]>([]);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (publication) {
@@ -56,6 +59,8 @@ export default function PublicationModal({ publication, isOpen, onClose }: Publi
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!newComment.trim()) return; // Prevent empty comments
 
     const cookies = parseCookies();
     const token = cookies.access_token;
@@ -72,6 +77,10 @@ export default function PublicationModal({ publication, isOpen, onClose }: Publi
       const newCommentData = response.data;
       setComments([...comments, newCommentData]);
       setNewComment('');
+      if (commentInputRef.current) {
+        commentInputRef.current.focus();
+      }
+      onPublish()
     } catch (error) {
       console.error('Error posting comment:', error);
     }
@@ -116,11 +125,11 @@ export default function PublicationModal({ publication, isOpen, onClose }: Publi
           <div className="mt-4 space-y-4">
             <p>{publication.content}</p>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <Button variant="ghost" size="sm" className="flex items-center space-x-1" onClick={handleLikesClick}>
+              <Button variant="outline" size="sm" className="flex items-center space-x-1" onClick={handleLikesClick}>
                 <ThumbsUp className="w-4 h-4" />
-                <span>{publication.likeCounts} Likes</span>
+                <span>{publication.likeCounts} {publication.likeCounts === 1 || publication.likeCounts === 0 ? 'Like' : 'Likes'}</span>
               </Button>
-              <Button variant="ghost" size="sm" className="flex items-center space-x-1">
+              <Button variant="outline" size="sm" className="flex items-center space-x-1">
                 <MessageSquare className="w-4 h-4" />
                 <span>{comments.length} Comments</span>
               </Button>
@@ -141,10 +150,6 @@ export default function PublicationModal({ publication, isOpen, onClose }: Publi
                         <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleDateString()} at {new Date(comment.createdAt).toLocaleTimeString()}</span>
                       </div>
                       <p className="mt-1 text-sm">{comment.content}</p>
-                      <Button variant="ghost" size="lg" className="mt-1 flex items-center space-x-1 p-0 h-auto">
-                        <ThumbsUp className="w-4 h-4" />
-                        <span className="text-xs">{comment.likes} Likes</span>
-                      </Button>
                     </div>
                   </div>
                 ))}
@@ -152,19 +157,27 @@ export default function PublicationModal({ publication, isOpen, onClose }: Publi
               <ScrollBar orientation="vertical" className="custom-scrollbar-thumb" />
             </ScrollArea>
           </div>
-          <div className="mt-2">
-            <form onSubmit={handleCommentSubmit}>
-              <Textarea
+          <div className="mt-4 flex items-center space-x-2">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={publication.user.avatar} alt={publication.user.name} />
+              <AvatarFallback>{publication.user.name[0]}</AvatarFallback>
+            </Avatar>
+            <form onSubmit={handleCommentSubmit} className="flex-grow flex items-center">
+              <Input
+                ref={commentInputRef}
                 placeholder="Write a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="min-h-[100px]"
+                className="flex-grow rounded-full bg-background"
               />
-              <Button type="submit" className="mt-2">Post Comment</Button>
+              <Button type="submit" size="icon" variant="ghost" className="ml-2">
+                <Send className="h-4 w-4" />
+              </Button>
             </form>
           </div>
         </DialogContent>
       </Dialog>
+
       <Dialog open={isLikesModalOpen} onOpenChange={() => setIsLikesModalOpen(false)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

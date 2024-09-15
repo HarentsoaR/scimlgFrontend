@@ -62,10 +62,21 @@ export default function Publications() {
         },
       });
 
-      // Ensure likes is a number
-      const publicationsWithLikes = response.data.map((pub: Publication) => ({
-        ...pub,
-        likes: typeof pub.likes === 'number' ? pub.likes : 0, // Set likes to 0 if it's not a number
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));
+      const userId = decodedToken.id;
+
+      const publicationsWithLikes = await Promise.all(response.data.map(async (pub: Publication) => {
+        const hasLiked = await axios.get(`http://localhost:8080/likes/check/${pub.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        return {
+          ...pub,
+          likes: typeof pub.likes === 'number' ? pub.likes : 0,
+          hasLiked: hasLiked.data, // Assuming the response is a boolean
+        };
       }));
 
       setPublications(publicationsWithLikes);
@@ -73,6 +84,7 @@ export default function Publications() {
       console.error('Error fetching publications:', error);
     }
   };
+
 
   const handleLikePublication = async (id: number) => {
     const cookies = parseCookies();
@@ -127,7 +139,7 @@ export default function Publications() {
       status: 'pending',
       evaluations: [],
       comments: [],
-      likes: 0 // Initialize likes as 0
+      likes: 0
     };
     setPublications([publication, ...publications]);
   };
@@ -196,10 +208,15 @@ export default function Publications() {
       <Card className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-2xl font-bold">Publications</CardTitle>
-          <Button onClick={() => setIsNewPublicationModalOpen(true)}>
+          <Button
+          variant="ghost"
+            onClick={() => setIsNewPublicationModalOpen(true)}
+            className="transition-colors"
+          >
             <Plus className="h-4 w-4 mr-2" />
-            New Publication
+            New
           </Button>
+
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
@@ -223,7 +240,7 @@ export default function Publications() {
           </div>
           <ScrollArea className="h-[calc(100vh-300px)]">
             {currentPublications.map((pub) => (
-              <Card key={pub.id} className="mb-4 hover:bg-gray-600 transition-colors">
+              <Card key={pub.id} className="mb-4 hover:bg-slate-200 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
                     <Avatar>
@@ -241,11 +258,16 @@ export default function Publications() {
                     </Button>
                   </div>
                   <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <Button variant="ghost" size="sm" className="flex items-center space-x-1" onClick={() => handleLikePublication(pub.id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`flex items-center space-x-1 ${pub.hasLiked ? 'bg-blue-100' : ''}`}
+                      onClick={() => handleLikePublication(pub.id)}
+                    >
                       <ThumbsUp className="w-4 h-4" />
-                      <span>{pub.likeCounts} Likes</span>
+                      <span>{pub.likeCounts} {pub.likeCounts === 1 || pub.likeCounts === 0 ? 'Like' : 'Likes'}</span>
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex items-center space-x-1">
+                    <Button variant="outline" size="sm" className="flex items-center space-x-1 cursor-default">
                       <MessageSquare className="w-4 h-4" />
                       <span>{pub.comments.length} Comments</span>
                     </Button>
@@ -284,11 +306,13 @@ export default function Publications() {
         publication={selectedPublication}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onPublish={fetchPublications}
       />
       <NewPublicationModal
         isOpen={isNewPublicationModalOpen}
         onClose={() => setIsNewPublicationModalOpen(false)}
         onSubmit={handleNewPublication}
+        onPublish={fetchPublications}
       />
       <ApprovalModal
         publication={selectedPublication}
