@@ -269,7 +269,7 @@ export default function Publications() {
                     </Button>
                     <Button variant="outline" size="sm" className="flex items-center space-x-1 cursor-default">
                       <MessageSquare className="w-4 h-4" />
-                      <span>{pub.comments.length} Comments</span>
+                      <span>{pub.comments.length} {pub.comments.length === 1 || pub.comments.length === 0 ? 'Comment' : 'Comments'}</span>
                     </Button>
                   </div>
                 </CardContent>
