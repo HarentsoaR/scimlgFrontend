@@ -48,7 +48,7 @@ const NewPublicationModal: React.FC<NewPublicationModalProps> = ({ isOpen, onClo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Publication</DialogTitle>
+          <DialogTitle>What's happening ?</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -72,7 +72,7 @@ const NewPublicationModal: React.FC<NewPublicationModalProps> = ({ isOpen, onClo
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Publish</Button>
+            <Button type="submit">Post</Button>
           </DialogFooter>
         </form>
       </DialogContent>

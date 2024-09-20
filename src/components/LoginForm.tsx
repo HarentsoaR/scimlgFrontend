@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Link from "next/link";
 import router, { useRouter } from "next/navigation";
 import axios from "axios";
+import { parseCookies } from "nookies";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -24,11 +25,14 @@ export default function LoginForm() {
       });
 
       if (response.data.loggedIn) {
-        // Store the access token in a cookie with HttpOnly and Secure flags
+        // Set the access token in cookies
         document.cookie = `access_token=${response.data.access_token}; path=/; Secure; SameSite=Strict`;
 
-        // Navigate to the Dashboard on successful login
-        router.push("/dashboard"); // Adjust the path based on your routing structure
+        // Call the function to activate the user
+        await activeUser(response.data.access_token);
+        console.log("User active !")
+        // Redirect to the dashboard
+        router.push("/dashboard");
       } else {
         // Set error message if login fails
         setErrorMessage("Login failed. Please check your credentials.");
@@ -36,6 +40,26 @@ export default function LoginForm() {
     } catch (error) {
       console.error("An error occurred during login:", error);
       setErrorMessage("Login failed. Please try again later.");
+    }
+  };
+
+  // Function to activate the user
+  const activeUser = async (token) => {
+    if (!token) throw new Error("No token found");
+
+    const decodedToken = JSON.parse(atob(token.split('.')[1]));
+    const userId = decodedToken.id;
+    console.log(userId);
+
+    try {
+      await axios.post("http://localhost:8080/active",
+        { userId },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+    } catch (error) {
+      console.error("Failed to add active user:", error);
     }
   };
 

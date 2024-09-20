@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/avatar"; // Assuming you have these components
 import router, { useRouter } from "next/navigation";
+import { parseCookies } from "nookies";
+import axios from "axios";
+import { useAuth } from '../context/AuthContext'; // Import your Auth context or state management
 
 export default function UserProfile() {
-const router = useRouter()
+  const router = useRouter();
+  const { setIsAuthenticated } = useAuth(); // Use context or state management to update auth status
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleAvatarClick = () => {
@@ -11,10 +15,25 @@ const router = useRouter()
   };
 
   const handleLogout = () => {
-    // Remove the access token from cookies
+    disconnectUser();
     document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    // Redirect to the main route
+    setIsAuthenticated(false); // Update auth status
     router.push("/");
+  };
+
+  const disconnectUser = async () => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
+    if (!token) throw new Error("No token found");
+    const decodedToken = JSON.parse(atob(token.split('.')[1]));
+    const userid = decodedToken.id;
+    try {
+      await axios.delete(`http://localhost:8080/active/${userid}`, {
+        data: { userId: userid.toString() },
+      });
+    } catch (error) {
+      console.error("Failed to disconnect user (but works):", error);
+    }
   };
 
   return (

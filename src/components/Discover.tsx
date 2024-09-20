@@ -3,8 +3,8 @@ import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area"; 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Briefcase, Users, MapPin, ChevronLeft, ChevronRight, Plus, Minus } from "lucide-react";
 import { parseCookies } from "nookies";
 
@@ -18,14 +18,13 @@ export default function Discover() {
     fetchResearchers();
   }, []);
 
-  
   const fetchResearchers = async () => {
     const cookies = parseCookies();
     const token = cookies.access_token;
-  
+
     const decodedToken = JSON.parse(atob(token.split('.')[1]));
     const userId = decodedToken.id;
-  
+
     try {
       const response = await axios.get("http://localhost:8080/users", {
         headers: {
@@ -33,20 +32,29 @@ export default function Discover() {
         },
       });
       const researchersData = response.data;
-  
+
       // Filter out the current user
       const filteredResearchers = researchersData.filter((researcher) => researcher.id !== userId);
-  
-      // Check follow status for each researcher
+
+      // Check follow status and follower count for each researcher
       const followStatusPromises = filteredResearchers.map(async (researcher) => {
         const isFollowingResponse = await axios.get(`http://localhost:8080/follow/check/${researcher.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        return { ...researcher, isFollowing: isFollowingResponse.data }; // Assuming the response returns a boolean
+
+        const followerCountResponse = await axios.get(`http://localhost:8080/follow/${researcher.id}/followers/count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        return {
+          ...researcher,
+          isFollowing: isFollowingResponse.data, // Assuming the response returns a boolean
+          followerCount: followerCountResponse.data // Set follower count
+        };
       });
-  
+
       const researchersWithFollowStatus = await Promise.all(followStatusPromises);
       setResearchers(researchersWithFollowStatus);
     } catch (error) {
@@ -77,6 +85,7 @@ export default function Discover() {
             researcher.id === researcherId ? { ...researcher, isFollowing: false } : researcher
           )
         );
+        fetchResearchers()
       } else {
         // Follow the researcher
         await axios.post(`http://localhost:8080/follow/${researcherId}`, {}, {
@@ -84,7 +93,7 @@ export default function Discover() {
             Authorization: `Bearer ${token}`,
           },
         });
-
+        fetchResearchers()
         // Update local state to reflect follow
         setResearchers((prevResearchers) =>
           prevResearchers.map((researcher) =>
@@ -128,9 +137,20 @@ export default function Discover() {
               <Card key={researcher.id} className="mb-4 hover:bg-slate-200 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback>{researcher.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                    </Avatar>
+                    <div className="relative group">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                      <Avatar className="relative h-12 w-12 ring-2 ring-background">
+                        <AvatarImage
+                          src={researcher.avatar}
+                          alt={researcher.name}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium">
+                          {researcher.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                    </div>
                     <div className="flex-grow">
                       <h3 className="text-lg font-semibold">{researcher.name}</h3>
                       {researcher.title && (
@@ -151,6 +171,9 @@ export default function Discover() {
                           {researcher.location}
                         </p>
                       )}
+                      <p className="text-sm text-muted-foreground">
+                        {researcher.followerCount} {researcher.followerCount === 1 ? 'Follower' : 'Followers'}
+                      </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleFollowToggle(researcher.id, researcher.isFollowing)}>
                       {researcher.isFollowing ? (

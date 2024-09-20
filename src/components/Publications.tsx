@@ -1,9 +1,11 @@
+"use client"
+
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -11,6 +13,7 @@ import PublicationModal from "./PublicationModal";
 import NewPublicationModal from "./NewPublicationModal";
 import ApprovalModal from "./ApprovalModal";
 import { parseCookies } from "nookies";
+import { HeartIcon } from 'lucide-react';
 
 interface User {
   id: number;
@@ -34,6 +37,8 @@ interface Publication {
   evaluations: any[];
   comments: Comment[];
   likes: number; // Change likes to a number
+  hasLiked: boolean;
+  followerCount: number; // Add follower count
 }
 
 export default function Publications() {
@@ -62,86 +67,27 @@ export default function Publications() {
         },
       });
 
-      const decodedToken = JSON.parse(atob(token.split('.')[1]));
-      const userId = decodedToken.id;
-
-      const publicationsWithLikes = await Promise.all(response.data.map(async (pub: Publication) => {
+      const publicationsWithDetails = await Promise.all(response.data.map(async (pub: Publication) => {
         const hasLiked = await axios.get(`http://localhost:8080/likes/check/${pub.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const followerCountResponse = await axios.get(`http://localhost:8080/follow/${pub.user.id}/followers/count`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         return {
           ...pub,
           likes: typeof pub.likes === 'number' ? pub.likes : 0,
-          hasLiked: hasLiked.data, // Assuming the response is a boolean
+          hasLiked: hasLiked.data,
+          followerCount: followerCountResponse.data, // Set follower count
         };
       }));
 
-      setPublications(publicationsWithLikes);
+      setPublications(publicationsWithDetails);
     } catch (error) {
       console.error('Error fetching publications:', error);
     }
-  };
-
-
-  const handleLikePublication = async (id: number) => {
-    const cookies = parseCookies();
-    const token = cookies.access_token;
-
-    try {
-      const response = await axios.post(`http://localhost:8080/likes/${id}`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      // Update the publications state with the new likes count
-      setPublications(publications.map(pub =>
-        pub.id === id ? { ...pub, likes: typeof response.data.likes === 'number' ? response.data.likes : 0 } : pub // Ensure likes is a number
-      ));
-      fetchPublications()
-    } catch (error) {
-      console.error('Error liking publication:', error);
-    }
-  };
-
-  const filteredPublications = publications.filter(pub =>
-    (pub.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pub.user.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (statusFilter === 'all' || pub.status === statusFilter)
-  );
-
-  const totalPages = Math.ceil(filteredPublications.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentPublications = filteredPublications.slice(startIndex, endIndex);
-
-  const handleReadClick = (publication: Publication) => {
-    setSelectedPublication(publication);
-    setIsModalOpen(true);
-  };
-
-  const handleApprovalClick = (publication: Publication) => {
-    setSelectedPublication(publication);
-    setIsApprovalModalOpen(true);
-  };
-
-  const handleNewPublication = (newPublication: { title: string; content: string }) => {
-    const publication: Publication = {
-      id: publications.length + 1,
-      title: newPublication.title,
-      content: newPublication.content,
-      user: { id: 0, name: "Current User" }, // Replace with actual user name
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'pending',
-      evaluations: [],
-      comments: [],
-      likes: 0
-    };
-    setPublications([publication, ...publications]);
   };
 
   const handleApprove = async (id: number) => {
@@ -188,19 +134,58 @@ export default function Publications() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-green-500 text-white';
-      case 'pending':
-        return 'bg-yellow-500 text-white';
-      case 'rejected':
-        return 'bg-red-500 text-white';
-      case 'under_review':
-        return 'bg-blue-500 text-white';
-      default:
-        return 'bg-gray-500 text-white';
+  const handleLikePublication = async (id: number) => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
+
+    try {
+      const response = await axios.post(`http://localhost:8080/likes/${id}`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setPublications(publications.map(pub =>
+        pub.id === id ? { ...pub, likes: typeof response.data.likes === 'number' ? response.data.likes : 0 } : pub
+      ));
+      fetchPublications()
+    } catch (error) {
+      console.error('Error liking publication:', error);
     }
+  };
+
+  const filteredPublications = publications.filter(pub =>
+    (pub.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pub.user.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (statusFilter === 'all' || pub.status === statusFilter)
+  );
+
+  const totalPages = Math.ceil(filteredPublications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPublications = filteredPublications.slice(startIndex, endIndex);
+
+  const handleReadClick = (publication: Publication) => {
+    setSelectedPublication(publication);
+    setIsModalOpen(true);
+  };
+
+  const handleNewPublication = (newPublication: { title: string; content: string }) => {
+    const publication: Publication = {
+      id: publications.length + 1,
+      title: newPublication.title,
+      content: newPublication.content,
+      user: { id: 0, name: "Current User" }, // Replace with actual user name
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'pending',
+      evaluations: [],
+      comments: [],
+      likes: 0,
+      hasLiked: false,
+      followerCount: 0 // Initialize follower count
+    };
+    setPublications([publication, ...publications]);
   };
 
   return (
@@ -209,14 +194,13 @@ export default function Publications() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-2xl font-bold">Publications</CardTitle>
           <Button
-          variant="ghost"
+            variant="ghost"
             onClick={() => setIsNewPublicationModalOpen(true)}
             className="transition-colors"
           >
             <Plus className="h-4 w-4 mr-2" />
             New
           </Button>
-
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
@@ -243,13 +227,24 @@ export default function Publications() {
               <Card key={pub.id} className="mb-4 hover:bg-slate-200 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
-                    <Avatar>
-                      <AvatarFallback>{pub.user.name[0]}</AvatarFallback>
-                    </Avatar>
+                    <div className="relative group">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full blur opacity-60 group-hover:opacity-100 transition duration-300 group-hover:duration-200"></div>
+                      <Avatar className="relative w-12 h-12 border-2 border-background shadow-lg group-hover:scale-105 transition duration-300">
+                        <AvatarImage
+                          src={pub.user.avatar}
+                          alt={pub.user.name}
+                          className="rounded-full object-cover"
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-emerald-500 text-white font-semibold">
+                          {pub.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-background"></div> */}
+                    </div>
                     <div className="flex-grow">
                       <h3 className="text-lg font-semibold">{pub.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {pub.user.name} • {new Date(pub.createdAt).toLocaleDateString()} at {new Date(pub.createdAt).toLocaleTimeString()}
+                        {pub.user.name} • {new Date(pub.createdAt).toLocaleDateString()} at {new Date(pub.createdAt).toLocaleTimeString()} • {pub.followerCount} Followers
                       </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleReadClick(pub)}>
@@ -257,19 +252,20 @@ export default function Publications() {
                       Read
                     </Button>
                   </div>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-2">
                     <Button
                       variant="outline"
                       size="sm"
                       className={`flex items-center space-x-1 ${pub.hasLiked ? 'bg-blue-100' : ''}`}
                       onClick={() => handleLikePublication(pub.id)}
                     >
-                      <ThumbsUp className="w-4 h-4" />
-                      <span>{pub.likeCounts} {pub.likeCounts === 1 || pub.likeCounts === 0 ? 'Like' : 'Likes'}</span>
+                      {/* <ThumbsUp className="w-4 h-4" /> */}
+                      <HeartIcon className="w-4 h-4" />
+                      <span>{pub.likeCounts} {pub.likeCounts === 1 ? 'Like' : 'Likes'}</span>
                     </Button>
                     <Button variant="outline" size="sm" className="flex items-center space-x-1 cursor-default">
                       <MessageSquare className="w-4 h-4" />
-                      <span>{pub.comments.length} {pub.comments.length === 1 || pub.comments.length === 0 ? 'Comment' : 'Comments'}</span>
+                      <span>{pub.comments.length} {pub.comments.length === 1 ? 'Comment' : 'Comments'}</span>
                     </Button>
                   </div>
                 </CardContent>

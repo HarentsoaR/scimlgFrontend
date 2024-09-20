@@ -112,10 +112,20 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
             <DialogTitle>{publication.title}</DialogTitle>
             <DialogDescription>
               <div className="flex items-center space-x-2 mt-2">
-                <Avatar>
-                  <AvatarImage src={publication.user.avatar} alt={publication.user.name} />
-                  <AvatarFallback>{publication.user.name[0]}</AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                  <Avatar className="relative h-10 w-10 ring-2 ring-background">
+                    <AvatarImage
+                      src={publication.user.avatar}
+                      alt={publication.user.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium">
+                      {publication.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                </div>
                 <span className="font-semibold">{publication.user.name}</span>
                 <span className="text-muted-foreground">•</span>
                 <span className="text-muted-foreground">{new Date(publication.createdAt).toLocaleDateString()} at {new Date(publication.createdAt).toLocaleTimeString()}</span>
@@ -140,10 +150,20 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
               <div className="space-y-4 p-4">
                 {comments.map((comment) => (
                   <div key={comment.id} className="flex space-x-3 border-b border-gray-200 pb-2 mb-2">
-                    <Avatar>
-                      <AvatarImage src={comment.user.avatar} alt={comment.user.name} />
-                      <AvatarFallback>{comment.user.name[0]}</AvatarFallback>
-                    </Avatar>
+                    <div className="relative group">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                      <Avatar className="relative h-10 w-10 ring-2 ring-background">
+                        <AvatarImage
+                          src={comment.user.avatar}
+                          alt={comment.user.name}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium">
+                          {comment.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                    </div>
                     <div className="flex-grow">
                       <div className="flex items-center space-x-2">
                         <span className="font-semibold text-sm">{comment.user.name}</span>
@@ -158,10 +178,20 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
             </ScrollArea>
           </div>
           <div className="mt-4 flex items-center space-x-2">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={publication.user.avatar} alt={publication.user.name} />
-              <AvatarFallback>{publication.user.name[0]}</AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                      <Avatar className="relative h-8 w-8 ring-2 ring-background">
+                        <AvatarImage
+                          src={publication.user.avatar}
+                          alt={publication.user.name}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium">
+                          {publication.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                    </div>
             <form onSubmit={handleCommentSubmit} className="flex-grow flex items-center">
               <Input
                 ref={commentInputRef}

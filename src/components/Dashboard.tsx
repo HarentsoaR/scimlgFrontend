@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Bell, Home, User, Search, Menu, BookOpen, Compass } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,9 @@ import UserProfile from "../components/UserProfile"
 import Publications from "../components/Publications"
 import Discover from "../components/Discover"
 import Profile from "../components/Profile"
+import { parseCookies } from "nookies";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Dashboard() {
   const [notifications, setNotifications] = useState([
@@ -18,11 +21,88 @@ export default function Dashboard() {
     { id: 3, content: "Upcoming webinar: 'Advances in Malagasy Biodiversity Research'" },
   ])
 
-  const [posts, setPosts] = useState([
-    { id: 1, author: "Dr. Rakoto", content: "Just published a new paper on Madagascar's unique ecosystems!", likes: 15, comments: 3 },
-    { id: 2, author: "Prof. Ratsimbazafy", content: "Exciting discoveries in lemur behavior research!", likes: 22, comments: 7 },
-    { id: 3, author: "Malagasy Science Team", content: "Join us for the upcoming virtual conference on sustainable agriculture in Madagascar.", likes: 10, comments: 1 },
-  ])
+  const [publications, setPublications] = useState([]);
+  const cookies = parseCookies();
+  const token = cookies.access_token;
+  const { isAuthenticated } = useAuth(); // Get authentication status
+
+
+  // const checkUserActive = async () => {
+  //   try {
+  //     if (!token) throw new Error("No token found");
+  //     const decodedToken = JSON.parse(atob(token.split('.')[1]));
+  //     const userid = decodedToken.id;
+  //     const userId = userid;
+  //     const response = await axios.get(`http://localhost:8080/${userId}/check`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     return response.data.isActive; // Assuming the response structure is { isActive: boolean }
+  //   } catch (error) {
+  //     console.error("Failed to check user active status:", error);
+  //     return false; // Return false or handle the error as needed
+  //   }
+  // };
+
+  useEffect(() => {
+    const fetchPublications = async () => {
+      if (!isAuthenticated) {
+        console.error('User is not authenticated.');
+        return; // Exit if not authenticated
+      }
+
+      const cookies = parseCookies();
+      const token = cookies.access_token; // Get the token from cookies
+
+      try {
+        const response = await axios.get('http://localhost:8080/articles/followed', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const publicationsWithDetails = await Promise.all(response.data.map(async (pub) => {
+          const hasLiked = await axios.get(`http://localhost:8080/likes/check/${pub.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const followerCountResponse = await axios.get(`http://localhost:8080/follow/${pub.user.id}/followers/count`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const userStatusResponse = await axios.get(`http://localhost:8080/active/${pub.user.id}/check`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          return {
+            ...pub,
+            likes: typeof pub.likes === 'number' ? pub.likes : 0,
+            hasLiked: hasLiked.data,
+            followerCount: followerCountResponse.data,
+            userStatus: userStatusResponse.data.isActive,
+          };
+        }));
+
+        setPublications(publicationsWithDetails);
+      } catch (error) {
+        console.error('Error fetching publications:', error);
+      }
+    };
+    // const checkActiveStatus = async () => {
+    //   const isActive = await checkUserActive(); // Check if user is active
+    //     console.log("User active status:", isActive);
+    // };
+    // checkActiveStatus();
+
+    //SYSTEM
+    fetchPublications()
+    const publicationsInterval = setInterval(() => {
+      fetchPublications();
+    }, 3000); // Refresh publications every 30 seconds
+
+    return () => {
+      clearInterval(publicationsInterval);
+    };
+  }, [isAuthenticated]);
 
   const [currentView, setCurrentView] = useState('home')
 
@@ -42,18 +122,30 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[calc(100vh-200px)]">
-                {posts.map((post) => (
-                  <div key={post.id} className="mb-4 border-b pb-4">
+                {publications.map((pub) => (
+                  <div key={pub.id} className="mb-4 border-b pb-4">
                     <div className="flex items-center space-x-2">
-                      <Avatar>
-                        <AvatarFallback>{post.author[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-semibold">{post.author}</span>
+                      <div className="relative group">
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-200 to-emerald-200 rounded-full blur opacity-60 group-hover:opacity-100 transition duration-300 group-hover:duration-200"></div>
+                        <Avatar className="relative w-10 h-10 border-2 border-background shadow-lg group-hover:scale-105 transition duration-300">
+                          <AvatarImage
+                            src={pub.user.avatar}
+                            alt={pub.user.name}
+                            className="rounded-full object-cover"
+                          />
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-emerald-500 text-white font-semibold">
+                            {pub.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background ${pub.userStatus ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                      </div>
+                      <span className="font-semibold">{pub.user.name} • {new Date(pub.createdAt).toLocaleDateString()} at {new Date(pub.createdAt).toLocaleTimeString()}</span>
                     </div>
-                    <p className="mt-2">{post.content}</p>
+                    <p className="mt-2">{pub.content}</p>
                     <div className="mt-2 flex items-center space-x-4 text-sm text-muted-foreground">
-                      <span>{post.likes} Likes</span>
-                      <span>{post.comments} Comments</span>
+                      <span>{pub.likeCounts} {pub.likeCounts === 1 ? 'Like' : 'Likes'}</span>
+                      <span>{pub.followerCount} {pub.followerCount === 1 ? 'Follower' : 'Followers'}</span>
+                      <span>{pub.hasLiked ? 'You liked this' : 'You have not liked this'}</span>
                     </div>
                   </div>
                 ))}
@@ -65,7 +157,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center p-5">
@@ -94,7 +186,7 @@ export default function Dashboard() {
               <Bell className="h-4 w-4" />
               <span className="sr-only">Notifications</span>
             </Button>
-            <UserProfile/>
+            <UserProfile />
           </div>
         </div>
       </header>
