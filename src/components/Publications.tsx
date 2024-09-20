@@ -52,6 +52,28 @@ export default function Publications() {
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const itemsPerPage = 3;
 
+
+  function formatPublicationDate(publicationDate: Date): string {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - publicationDate.getTime()) / 1000);
+    const diffInDays = Math.floor(diffInSeconds / 86400); // Calculate the difference in days
+
+    if (diffInSeconds < 60) {
+      return 'Now'; // Less than a minute ago
+    } else if (diffInSeconds < 300) { // 5 minutes
+      return `${Math.floor(diffInSeconds / 60)}m ago`; // Use 'm' for minutes
+    } else if (diffInSeconds < 3600) { // Less than 1 hour
+      return `${Math.floor(diffInSeconds / 60)}m ago`;
+    } else if (diffInSeconds < 86400) { // Less than 24 hours
+      return `${Math.floor(diffInSeconds / 3600)}h ago`; // Use 'h' for hours
+    } else if (diffInDays < 30) { // Less than 30 days
+      return `${diffInDays}d ago`; // Use 'd' for days
+    } else {
+      // For older dates, return a formatted date string
+      return publicationDate.toLocaleDateString() + ' ' + publicationDate.toLocaleTimeString();
+    }
+  }
+
   useEffect(() => {
     fetchPublications();
   }, []);
@@ -84,11 +106,15 @@ export default function Publications() {
         };
       }));
 
+      // Sort publications by createdAt date in descending order
+      publicationsWithDetails.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
       setPublications(publicationsWithDetails);
     } catch (error) {
       console.error('Error fetching publications:', error);
     }
   };
+
 
   const handleApprove = async (id: number) => {
     const cookies = parseCookies();
@@ -244,7 +270,7 @@ export default function Publications() {
                     <div className="flex-grow">
                       <h3 className="text-lg font-semibold">{pub.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {pub.user.name} • {new Date(pub.createdAt).toLocaleDateString()} at {new Date(pub.createdAt).toLocaleTimeString()} • {pub.followerCount} Followers
+                        {pub.user.name} • {pub.followerCount === 1 ? 'Follower' : 'Followers'} • {formatPublicationDate(new Date(pub.createdAt))}
                       </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleReadClick(pub)}>

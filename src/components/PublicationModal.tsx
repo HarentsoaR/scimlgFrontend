@@ -6,9 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from './ui/input';
-import { ThumbsUp, MessageSquare, Send } from "lucide-react";
+import { HeartIcon, MessageSquare, Send } from "lucide-react";
 import { parseCookies } from "nookies";
 
 interface User {
@@ -48,8 +47,51 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
   const [isLikesModalOpen, setIsLikesModalOpen] = useState(false);
   const [likedUsers, setLikedUsers] = useState<User[]>([]);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  function formatPublicationDate(publicationDate: Date): string {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - publicationDate.getTime()) / 1000);
+    const diffInDays = Math.floor(diffInSeconds / 86400); // Calculate the difference in days
+
+    if (diffInSeconds < 60) {
+      return 'Now'; // Less than a minute ago
+    } else if (diffInSeconds < 300) { // 5 minutes
+      return `${Math.floor(diffInSeconds / 60)}m ago`; // Use 'm' for minutes
+    } else if (diffInSeconds < 3600) { // Less than 1 hour
+      return `${Math.floor(diffInSeconds / 60)}m ago`;
+    } else if (diffInSeconds < 86400) { // Less than 24 hours
+      return `${Math.floor(diffInSeconds / 3600)}h ago`; // Use 'h' for hours
+    } else if (diffInDays < 30) { // Less than 30 days
+      return `${diffInDays}d ago`; // Use 'd' for days
+    } else {
+      // For older dates, return a formatted date string
+      return publicationDate.toLocaleDateString() + ' ' + publicationDate.toLocaleTimeString();
+    }
+  }
 
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const cookies = parseCookies();
+      const token = cookies.access_token;
+
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));
+      const userId = decodedToken.id;
+
+      try {
+        const response = await axios.get(`http://localhost:8080/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setCurrentUser(response.data);
+      } catch (error) {
+        console.error('Error fetching current user:', error);
+      }
+    };
+
+    fetchCurrentUser();
+
     if (publication) {
       setComments(publication.comments);
     }
@@ -109,26 +151,26 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{publication.title}</DialogTitle>
+            <DialogTitle className='text-center font-semibold'>{publication.title}</DialogTitle>
             <DialogDescription>
               <div className="flex items-center space-x-2 mt-2">
                 <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
                   <Avatar className="relative h-10 w-10 ring-2 ring-background">
                     <AvatarImage
                       src={publication.user.avatar}
                       alt={publication.user.name}
                       className="object-cover"
                     />
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-emerald-500 text-white font-medium">
                       {publication.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
                 </div>
                 <span className="font-semibold">{publication.user.name}</span>
                 <span className="text-muted-foreground">•</span>
-                <span className="text-muted-foreground">{new Date(publication.createdAt).toLocaleDateString()} at {new Date(publication.createdAt).toLocaleTimeString()}</span>
+                <span className="text-muted-foreground">{formatPublicationDate(new Date(publication.createdAt))}</span>
               </div>
             </DialogDescription>
           </DialogHeader>
@@ -136,7 +178,7 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
             <p>{publication.content}</p>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <Button variant="outline" size="sm" className="flex items-center space-x-1" onClick={handleLikesClick}>
-                <ThumbsUp className="w-4 h-4" />
+                <HeartIcon className="w-4 h-4" />
                 <span>{publication.likeCounts} {publication.likeCounts === 1 || publication.likeCounts === 0 ? 'Like' : 'Likes'}</span>
               </Button>
               <Button variant="outline" size="sm" className="flex items-center space-x-1">
@@ -151,14 +193,14 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
                 {comments.map((comment) => (
                   <div key={comment.id} className="flex space-x-3 border-b border-gray-200 pb-2 mb-2">
                     <div className="relative group">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
                       <Avatar className="relative h-10 w-10 ring-2 ring-background">
                         <AvatarImage
                           src={comment.user.avatar}
                           alt={comment.user.name}
                           className="object-cover"
                         />
-                        <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-emerald-500 text-white font-medium">
                           {comment.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -167,7 +209,7 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
                     <div className="flex-grow">
                       <div className="flex items-center space-x-2">
                         <span className="font-semibold text-sm">{comment.user.name}</span>
-                        <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleDateString()} at {new Date(comment.createdAt).toLocaleTimeString()}</span>
+                        <span className="text-xs text-muted-foreground">{formatPublicationDate(new Date(comment.createdAt))}</span>
                       </div>
                       <p className="mt-1 text-sm">{comment.content}</p>
                     </div>
@@ -178,20 +220,22 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
             </ScrollArea>
           </div>
           <div className="mt-4 flex items-center space-x-2">
-            <div className="relative group">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-                      <Avatar className="relative h-8 w-8 ring-2 ring-background">
-                        <AvatarImage
-                          src={publication.user.avatar}
-                          alt={publication.user.name}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium">
-                          {publication.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
-                    </div>
+            {/* <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+              <Avatar className="relative h-8 w-8 ring-2 ring-background">
+                <AvatarImage
+                  src={currentUser.avatar} // Use the current user's avatar
+                  alt={currentUser.name} // Use the current user's name
+                  className="object-cover rounded-full" // Ensure the image is rounded
+                />
+                <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium flex items-center justify-center rounded-full">
+                  <span className="text-lg font-bold">
+                    {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()} // Use the current user's initials
+                  </span>
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+            </div> */}
             <form onSubmit={handleCommentSubmit} className="flex-grow flex items-center">
               <Input
                 ref={commentInputRef}

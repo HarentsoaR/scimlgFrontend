@@ -22,34 +22,34 @@ export default function Dashboard() {
   ])
 
   const [publications, setPublications] = useState([]);
-  const cookies = parseCookies();
-  const token = cookies.access_token;
   const { isAuthenticated } = useAuth(); // Get authentication status
 
+  function formatPublicationDate(publicationDate: Date): string {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - publicationDate.getTime()) / 1000);
+    const diffInDays = Math.floor(diffInSeconds / 86400); // Calculate the difference in days
 
-  // const checkUserActive = async () => {
-  //   try {
-  //     if (!token) throw new Error("No token found");
-  //     const decodedToken = JSON.parse(atob(token.split('.')[1]));
-  //     const userid = decodedToken.id;
-  //     const userId = userid;
-  //     const response = await axios.get(`http://localhost:8080/${userId}/check`, {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-  //     return response.data.isActive; // Assuming the response structure is { isActive: boolean }
-  //   } catch (error) {
-  //     console.error("Failed to check user active status:", error);
-  //     return false; // Return false or handle the error as needed
-  //   }
-  // };
-
+    if (diffInSeconds < 60) {
+      return 'Now'; // Less than a minute ago
+    } else if (diffInSeconds < 300) { // 5 minutes
+      return `${Math.floor(diffInSeconds / 60)}m ago`; // Use 'm' for minutes
+    } else if (diffInSeconds < 3600) { // Less than 1 hour
+      return `${Math.floor(diffInSeconds / 60)}m ago`;
+    } else if (diffInSeconds < 86400) { // Less than 24 hours
+      return `${Math.floor(diffInSeconds / 3600)}h ago`; // Use 'h' for hours
+    } else if (diffInDays < 30) { // Less than 30 days
+      return `${diffInDays}d ago`; // Use 'd' for days
+    } else {
+      // For older dates, return a formatted date string
+      return publicationDate.toLocaleDateString() + ' ' + publicationDate.toLocaleTimeString();
+    }
+  }
   useEffect(() => {
     const fetchPublications = async () => {
       if (!isAuthenticated) {
         console.error('User is not authenticated.');
         return; // Exit if not authenticated
       }
-
       const cookies = parseCookies();
       const token = cookies.access_token; // Get the token from cookies
 
@@ -82,22 +82,18 @@ export default function Dashboard() {
           };
         }));
 
+        publicationsWithDetails.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
         setPublications(publicationsWithDetails);
       } catch (error) {
         console.error('Error fetching publications:', error);
       }
     };
-    // const checkActiveStatus = async () => {
-    //   const isActive = await checkUserActive(); // Check if user is active
-    //     console.log("User active status:", isActive);
-    // };
-    // checkActiveStatus();
-
     //SYSTEM
     fetchPublications()
     const publicationsInterval = setInterval(() => {
       fetchPublications();
-    }, 3000); // Refresh publications every 30 seconds
+    }, 60000); // Refresh publications every 60 seconds
 
     return () => {
       clearInterval(publicationsInterval);
@@ -139,7 +135,7 @@ export default function Dashboard() {
                         </Avatar>
                         <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background ${pub.userStatus ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                       </div>
-                      <span className="font-semibold">{pub.user.name} • {new Date(pub.createdAt).toLocaleDateString()} at {new Date(pub.createdAt).toLocaleTimeString()}</span>
+                      <span className="font-semibold">{pub.user.name} • <span className="font-light">{formatPublicationDate(new Date(pub.createdAt))}</span></span>
                     </div>
                     <p className="mt-2">{pub.content}</p>
                     <div className="mt-2 flex items-center space-x-4 text-sm text-muted-foreground">
