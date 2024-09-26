@@ -7,12 +7,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Briefcase, Users, MapPin, ChevronLeft, ChevronRight, Plus, Minus } from "lucide-react";
 import { parseCookies } from "nookies";
+import { ProfileModal } from "./ProfileModal";
 
 export default function Discover() {
   const [researchers, setResearchers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4; // Number of researchers per page
+
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     fetchResearchers();
@@ -139,7 +143,13 @@ export default function Discover() {
                   <div className="flex items-center space-x-4">
                     <div className="relative group">
                       <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-                      <Avatar className="relative h-12 w-12 ring-2 ring-background">
+                      <Avatar
+                        className="relative w-12 h-12 border-2 border-background shadow-lg group-hover:scale-105 transition duration-300 cursor-pointer"
+                        onClick={() => {
+                          setSelectedUserId(researcher.id.toString());
+                          setIsProfileModalOpen(true);
+                        }}
+                      >
                         <AvatarImage
                           src={researcher.avatar}
                           alt={researcher.name}
@@ -149,7 +159,7 @@ export default function Discover() {
                           {researcher.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                      {/* <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div> */}
                     </div>
                     <div className="flex-grow">
                       <h3 className="text-lg font-semibold">{researcher.name}</h3>
@@ -220,6 +230,14 @@ export default function Discover() {
           </div>
         </CardContent>
       </Card>
+      <ProfileModal
+        userId={selectedUserId}
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedUserId(null); // Reset user ID when closing
+        }}
+      />
     </div>
   );
 }

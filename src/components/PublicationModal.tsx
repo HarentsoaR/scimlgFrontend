@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -14,6 +12,7 @@ interface User {
   id: number;
   name: string;
   avatar?: string;
+  userStatus: boolean; // Add userStatus field
 }
 
 interface Comment {
@@ -52,22 +51,14 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
   function formatPublicationDate(publicationDate: Date): string {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - publicationDate.getTime()) / 1000);
-    const diffInDays = Math.floor(diffInSeconds / 86400); // Calculate the difference in days
+    const diffInDays = Math.floor(diffInSeconds / 86400);
 
-    if (diffInSeconds < 60) {
-      return 'Now'; // Less than a minute ago
-    } else if (diffInSeconds < 300) { // 5 minutes
-      return `${Math.floor(diffInSeconds / 60)}m ago`; // Use 'm' for minutes
-    } else if (diffInSeconds < 3600) { // Less than 1 hour
-      return `${Math.floor(diffInSeconds / 60)}m ago`;
-    } else if (diffInSeconds < 86400) { // Less than 24 hours
-      return `${Math.floor(diffInSeconds / 3600)}h ago`; // Use 'h' for hours
-    } else if (diffInDays < 30) { // Less than 30 days
-      return `${diffInDays}d ago`; // Use 'd' for days
-    } else {
-      // For older dates, return a formatted date string
-      return publicationDate.toLocaleDateString() + ' ' + publicationDate.toLocaleTimeString();
-    }
+    if (diffInSeconds < 60) return 'Now';
+    if (diffInSeconds < 300) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInDays < 30) return `${diffInDays}d ago`;
+    return publicationDate.toLocaleDateString() + ' ' + publicationDate.toLocaleTimeString();
   }
 
   useEffect(() => {
@@ -90,11 +81,41 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
       }
     };
 
-    fetchCurrentUser();
+    const fetchPublicationAndCommentsStatus = async () => {
+      if (publication) {
+        // Fetch publication owner status
+        const cookies = parseCookies();
+        const token = cookies.access_token;
 
-    if (publication) {
-      setComments(publication.comments);
-    }
+        try {
+          const ownerStatusResponse = await axios.get(`http://localhost:8080/active/${publication.user.id}/check`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          publication.user.userStatus = ownerStatusResponse.data.isActive; // Update owner status
+
+          // Fetch comments with user statuses
+          const updatedComments = await Promise.all(publication.comments.map(async (comment) => {
+            const commenterStatusResponse = await axios.get(`http://localhost:8080/active/${comment.user.id}/check`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            return {
+              ...comment,
+              user: {
+                ...comment.user,
+                userStatus: commenterStatusResponse.data.isActive, // Update commenter status
+              },
+            };
+          }));
+
+          setComments(updatedComments); // Set updated comments with statuses
+        } catch (error) {
+          console.error('Error fetching user statuses:', error);
+        }
+      }
+    };
+
+    fetchCurrentUser();
+    fetchPublicationAndCommentsStatus();
   }, [publication]);
 
   if (!publication) return null;
@@ -102,13 +123,13 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newComment.trim()) return; // Prevent empty comments
+    if (!newComment.trim()) return;
 
     const cookies = parseCookies();
     const token = cookies.access_token;
 
     try {
-      const response = await axios.post(`http://localhost:8080/articles/${publication.id}/comments`, {
+      const response = await axios.post(`http://localhost:8080/comments/${publication.id}/comments`, {
         content: newComment,
       }, {
         headers: {
@@ -122,7 +143,7 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
       if (commentInputRef.current) {
         commentInputRef.current.focus();
       }
-      onPublish()
+      onPublish();
     } catch (error) {
       console.error('Error posting comment:', error);
     }
@@ -166,7 +187,7 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
                       {publication.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                  <div className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${publication.user.userStatus ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                 </div>
                 <span className="font-semibold">{publication.user.name}</span>
                 <span className="text-muted-foreground">•</span>
@@ -204,7 +225,7 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
                           {comment.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
+                      <div className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${comment.user.userStatus ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                     </div>
                     <div className="flex-grow">
                       <div className="flex items-center space-x-2">
@@ -220,22 +241,6 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
             </ScrollArea>
           </div>
           <div className="mt-4 flex items-center space-x-2">
-            {/* <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-              <Avatar className="relative h-8 w-8 ring-2 ring-background">
-                <AvatarImage
-                  src={currentUser.avatar} // Use the current user's avatar
-                  alt={currentUser.name} // Use the current user's name
-                  className="object-cover rounded-full" // Ensure the image is rounded
-                />
-                <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-400 text-white font-medium flex items-center justify-center rounded-full">
-                  <span className="text-lg font-bold">
-                    {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()} // Use the current user's initials
-                  </span>
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background transform translate-x-1/4 translate-y-1/4"></div>
-            </div> */}
             <form onSubmit={handleCommentSubmit} className="flex-grow flex items-center">
               <Input
                 ref={commentInputRef}
@@ -258,6 +263,7 @@ export default function PublicationModal({ publication, isOpen, onClose, onPubli
             <DialogTitle>Users who liked this publication</DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+            {/* Render liked users here */}
             {likedUsers.map((user) => (
               <div key={user.id} className="flex items-center space-x-4 py-2">
                 <Avatar>

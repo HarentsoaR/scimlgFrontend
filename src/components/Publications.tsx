@@ -14,6 +14,8 @@ import NewPublicationModal from "./NewPublicationModal";
 import ApprovalModal from "./ApprovalModal";
 import { parseCookies } from "nookies";
 import { HeartIcon } from 'lucide-react';
+import { ProfileModal } from "./ProfileModal";
+import { ScrollBar } from "./ui/custom-scrollbar";
 
 interface User {
   id: number;
@@ -50,7 +52,11 @@ export default function Publications() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewPublicationModalOpen, setIsNewPublicationModalOpen] = useState(false);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
-  const itemsPerPage = 3;
+  const itemsPerPage = 4;
+
+
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
 
   function formatPublicationDate(publicationDate: Date): string {
@@ -98,11 +104,16 @@ export default function Publications() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
+        const userStatusResponse = await axios.get(`http://localhost:8080/active/${pub.user.id}/check`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
         return {
           ...pub,
           likes: typeof pub.likes === 'number' ? pub.likes : 0,
           hasLiked: hasLiked.data,
           followerCount: followerCountResponse.data, // Set follower count
+          userStatus: userStatusResponse.data.isActive
         };
       }));
 
@@ -255,7 +266,13 @@ export default function Publications() {
                   <div className="flex items-center space-x-4">
                     <div className="relative group">
                       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full blur opacity-60 group-hover:opacity-100 transition duration-300 group-hover:duration-200"></div>
-                      <Avatar className="relative w-12 h-12 border-2 border-background shadow-lg group-hover:scale-105 transition duration-300">
+                      <Avatar
+                        className="relative w-12 h-12 border-2 border-background shadow-lg group-hover:scale-105 transition duration-300 cursor-pointer"
+                        onClick={() => {
+                          setSelectedUserId(pub.user.id.toString());
+                          setIsProfileModalOpen(true);
+                        }}
+                      >
                         <AvatarImage
                           src={pub.user.avatar}
                           alt={pub.user.name}
@@ -270,7 +287,7 @@ export default function Publications() {
                     <div className="flex-grow">
                       <h3 className="text-lg font-semibold">{pub.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {pub.user.name} • {pub.followerCount === 1 ? 'Follower' : 'Followers'} • {formatPublicationDate(new Date(pub.createdAt))}
+                        {pub.user.name} • {pub.followerCount === 1 ? `${pub.followerCount} Follower` : `${pub.followerCount} Followers`} • {formatPublicationDate(new Date(pub.createdAt))}
                       </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleReadClick(pub)}>
@@ -297,6 +314,7 @@ export default function Publications() {
                 </CardContent>
               </Card>
             ))}
+            <ScrollBar />
           </ScrollArea>
 
           <div className="flex justify-between items-center mt-4">
@@ -342,6 +360,14 @@ export default function Publications() {
         onClose={() => setIsApprovalModalOpen(false)}
         onApprove={handleApprove}
         onReject={handleReject}
+      />
+      <ProfileModal
+        userId={selectedUserId}
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedUserId(null); // Reset user ID when closing
+        }}
       />
     </div>
   );

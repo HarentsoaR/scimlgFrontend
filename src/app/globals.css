@@ -1,3 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom scrollbar styles */
+[data-radix-scroll-area-viewport] {
+    scrollbar-width: thin; /* For Firefox */
+    -ms-overflow-style: auto; /* For Internet Explorer and Edge */
+  }
+  
+  [data-radix-scroll-area-viewport]::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+  }
+  
+  [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.5); /* Color of the scrollbar thumb */
+    border-radius: 10px; /* Roundness of the scrollbar */
+  }
+  
+  [data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1); /* Color of the scrollbar track */
+  }
+
+
+
+  .blur {
+    filter: blur(4px); /* Adjust the blur amount as needed */
+    transition: filter 0.3s ease; /* Smooth transition */
+  }
+  
+  
