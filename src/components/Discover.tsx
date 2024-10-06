@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/custom-scrollbar";
 import { Briefcase, Users, MapPin, ChevronLeft, ChevronRight, Plus, Minus } from "lucide-react";
 import { parseCookies } from "nookies";
 import { ProfileModal } from "./ProfileModal";
@@ -202,6 +202,7 @@ export default function Discover() {
                 </CardContent>
               </Card>
             ))}
+            <ScrollBar />
           </ScrollArea>
 
           {/* Pagination Controls */}

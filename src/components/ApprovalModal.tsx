@@ -28,33 +28,38 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({ publication, isOpen, onCl
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[625px]">
-        <DialogHeader>
-          <DialogTitle>Review Publication</DialogTitle>
-        </DialogHeader>
-        <div className="mt-4">
-          <div className="flex items-center space-x-2">
-            <Avatar>
-              <AvatarFallback>{publication.user.name[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="text-lg font-semibold">{publication.title}</h3>
-              <p className="text-sm text-muted-foreground">{publication.user.name} • {new Date(publication.createdAt).toLocaleDateString()} at {new Date(publication.createdAt).toLocaleTimeString()}</p>
-            </div>
+    <DialogContent className="sm:max-w-[625px]">
+      <DialogHeader>
+        <DialogTitle className="text-xl font-bold">Review Publication</DialogTitle>
+      </DialogHeader>
+      <div className="mt-4">
+        <div className="flex items-center space-x-3">
+          <Avatar>
+            <AvatarFallback>{publication.user.name[0]}</AvatarFallback>
+          </Avatar>
+          <div>
+            <h3 className="text-lg font-semibold">{publication.title}</h3>
+            <p className="text-sm text-muted-foreground">
+              {publication.author} • {new Date(publication.date).toLocaleDateString()} at {new Date(publication.date).toLocaleTimeString()}
+            </p>
           </div>
-          <ScrollArea className="mt-4 max-h-[60vh]">
-            <div className="space-y-4">
-              <p>{publication.content}</p>
-            </div>
-          </ScrollArea>
         </div>
-        <DialogFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => onReject(publication.id)}>Reject</Button>
-          <Button onClick={() => onApprove(publication.id)}>Approve</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+        <ScrollArea className="mt-4 max-h-[60vh] p-4 border rounded-md border-gray-200">
+          <div className="space-y-4">
+            <p className="text-base">{publication.content}</p>
+          </div>
+        </ScrollArea>
+      </div>
+      <DialogFooter className="flex justify-between mt-4">
+        {/* <Button variant="outline" className="text-red-600 underline-offset-4 hover:underline" onClick={() => onReject(publication.id)}>
+          Reject
+        </Button> */}
+        <Button onClick={() => onApprove(publication.id)} className="bg-blue-600 text-white hover:bg-blue-700">
+          Approve
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
 }
-
 export default ApprovalModal

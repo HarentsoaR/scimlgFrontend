@@ -1,14 +1,14 @@
 "use client"
-import Dashboard from "../../components/Dashboard";
+import Admin from "../../components/Admin";
 import { AuthProvider } from '@/context/AuthContext'
 import { NotificationProvider } from '@/context//NotificationContext';
 
-export default function LoginPage() {
+export default function AdminPage() {
   return (
     <AuthProvider>
       <NotificationProvider>
         <main className="flex">
-          <Dashboard />
+          <Admin />
         </main>
       </NotificationProvider>
     </AuthProvider>

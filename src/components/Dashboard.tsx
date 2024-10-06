@@ -16,8 +16,13 @@ import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { ProfileModal } from "./ProfileModal";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useNotificationContext } from "@/context/NotificationContext";
 
 export default function Dashboard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [notifications, setNotifications] = useState([]);
   const [publications, setPublications] = useState([]);
   const { isAuthenticated } = useAuth();
@@ -41,7 +46,40 @@ export default function Dashboard() {
     return publicationDate.toLocaleDateString() + ' ' + publicationDate.toLocaleTimeString();
   }
 
+  const handleLinkClick = async (articleTitle: string | number | boolean) => {
+    router.push(`/notification?title=${encodeURIComponent(articleTitle)}`);
+  };
+
+  const ArticleLink = async (articleTitle: string | number | boolean, id: any) => {
+    markNotificationAsRead(id)
+    router.push(`/notification?title=${encodeURIComponent(articleTitle)}`);
+  };
+
+  const UserLink = async (username: string | number | boolean, id: any) => {
+    markNotificationAsRead(id)
+    router.push(`/user?username=${encodeURIComponent(username)}`);
+  };
+
+  const markNotificationAsRead = async (id: any) => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
+    try {
+      const response = await axios.put(`http://localhost:8080/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("Notification marked as read:", response.data);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
   useEffect(() => {
+
+    const view = searchParams.get('view'); // Get the view parameter from the URL
+    if (view) {
+      setCurrentView(view); // Set the current view based on the URL parameter
+    }
+
     const fetchNotifications = async () => {
       if (!isAuthenticated) {
         console.error("User is not authenticated.");
@@ -57,7 +95,8 @@ export default function Dashboard() {
           headers: { Authorization: `Bearer ${token}` },
         });
         console.log(response.data)
-        setNotifications(response.data);
+        const unreadNotifications = response.data.filter((notification: { isRead: any; }) => !notification.isRead);
+        setNotifications(unreadNotifications);
       } catch (error) {
         console.error("Error fetching notifications:", error);
       }
@@ -76,7 +115,7 @@ export default function Dashboard() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const publicationsWithDetails = await Promise.all(response.data.map(async (pub) => {
+        const publicationsWithDetails = await Promise.all(response.data.map(async (pub: { id: any; user: { id: any; }; likes: any; }) => {
           const hasLiked = await axios.get(`http://localhost:8080/likes/check/${pub.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -107,7 +146,7 @@ export default function Dashboard() {
 
     fetchPublications()
     fetchNotifications()
-    const publicationsInterval = setInterval(fetchPublications, 1000);
+    const publicationsInterval = setInterval(fetchPublications, 30000);
 
     return () => clearInterval(publicationsInterval);
   }, [isAuthenticated]);
@@ -127,7 +166,7 @@ export default function Dashboard() {
               <CardTitle>Activity Feed</CardTitle>
             </CardHeader>
             <ScrollArea className="h-[calc(100vh-200px)] w-full rounded-md border">
-            <CardContent>
+              <CardContent>
                 <div className="p-4">
                   {publications.map((pub) => (
                     <div key={pub.id} className="mb-4 border-b pb-4">
@@ -147,7 +186,7 @@ export default function Dashboard() {
                               className="rounded-full object-cover"
                             />
                             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-emerald-500 text-white font-semibold">
-                              {pub.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                              {pub.user.name.split(' ').map((n: any[]) => n[0]).join('').toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background ${pub.userStatus ? 'bg-green-500' : 'bg-gray-500'}`}></div>
@@ -163,9 +202,9 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
-            </CardContent>
-            <ScrollBar />
-              </ScrollArea>
+              </CardContent>
+              <ScrollBar />
+            </ScrollArea>
           </Card>
         )
     }
@@ -237,12 +276,100 @@ export default function Dashboard() {
                 <ScrollArea className="h-[300px] w-full rounded-md border">
                   <div className="p-4">
                     <h3 className="mb-4 text-sm font-medium leading-none">Notifications</h3>
-                    {notifications.map((notification) => (
-                      <div key={notification.id} className="mb-4 border-b pb-4 last:border-b-0">
-                        <p className="text-sm">{notification.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">{formatPublicationDate(new Date(notification.createdAt))}</p>
-                      </div>
-                    ))}
+                    {notifications.map((notification) => {
+                      const isArticleNotification = notification.message.includes("has posted a new article:");
+                      const isFollowNotification = notification.message.includes("started following you");
+                      const isLikeNotification = notification.message.includes("liked your article");
+                      const isCommentNotification = notification.message.includes("commented on your article about");
+
+                      let content;
+
+                      if (isArticleNotification) {
+                        const titleMatch = notification.message.match(/: (.+)$/);
+                        const articleTitle = titleMatch ? titleMatch[1] : "Article";
+
+                        // Extract username using regex
+                        const usernameMatch = notification.message.match(/^(.*?) has posted a new article/);
+                        const username = usernameMatch ? usernameMatch[1].trim() : "User";
+
+                        content = (
+                          <p className="text-sm">
+                            {username} has posted a new article:{" "}
+                            <span
+                              onClick={() => ArticleLink(articleTitle, notification.id)}
+                              className="text-blue-500 hover:underline cursor-pointer"
+                            >
+                              {articleTitle}
+                            </span>
+                          </p>
+                        );
+                      } else if (isFollowNotification) {
+                        // Extract username using regex
+                        const usernameMatch = notification.message.match(/^(.*?) started following you/);
+                        const username = usernameMatch ? usernameMatch[1].trim() : "User";
+
+                        content = (
+                          <p className="text-sm">
+                            <span
+                              onClick={() => UserLink(username, notification.id)}
+                              className="text-blue-500 hover:underline cursor-pointer"
+                            >
+                              {username}
+                            </span>{" "}
+                            has followed you.
+                          </p>
+                        );
+                      } else if (isLikeNotification) {
+                        const titleMatch = notification.message.match(/: (.+)$/);
+                        const articleTitle = titleMatch ? titleMatch[1] : "Article";
+
+                        const usernameMatch = notification.message.match(/^(.*?) liked your article:/);
+                        const username = usernameMatch ? usernameMatch[1].trim() : "User";
+
+                        content = (
+                          <p className="text-sm">
+                              {username}{""}
+                            liked your article:
+                            <span
+                              onClick={() => ArticleLink(articleTitle, notification.id)}
+                              className="text-blue-500 hover:underline cursor-pointer"
+                            >
+                              {articleTitle}
+                            </span>
+                          </p>
+                        );
+                      } else if (isCommentNotification) {
+                        // Extract username using regex
+                        const usernameMatch = notification.message.match(/^(.*?) commented on your article about/);
+                        const username = usernameMatch ? usernameMatch[1].trim() : "User";
+
+                        const titleMatch = notification.message.match(/about (.+)$/);
+                        const articleTitle = titleMatch ? titleMatch[1] : "Article";
+
+                        content = (
+                          <p className="text-sm">
+                              {username}{" "}
+                            commented on your article about{" "}
+                            <span
+                              onClick={() => ArticleLink(articleTitle, notification.id)}
+                              className="text-blue-500 hover:underline cursor-pointer"
+                            >
+                              {articleTitle}
+                            </span>.
+                          </p>
+                        );
+                      } else {
+                        content = <p className="text-sm">{notification.message}</p>;
+                      }
+
+                      return (
+                        <div key={notification.id} className="mb-4 border-b pb-4 last:border-b-0">
+                          {content}
+                          <p className="text-xs text-gray-500 mt-1">{formatPublicationDate(new Date(notification.createdAt))}</p>
+                        </div>
+                      );
+                    })}
+
                   </div>
                   <ScrollBar />
                 </ScrollArea>

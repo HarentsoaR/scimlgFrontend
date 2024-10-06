@@ -1,14 +1,14 @@
 "use client"
-import Dashboard from "../../components/Dashboard";
+import { NotificationProvider } from "@/context/NotificationContext";
+import Notification from "../../components/Notification";
 import { AuthProvider } from '@/context/AuthContext'
-import { NotificationProvider } from '@/context//NotificationContext';
 
-export default function LoginPage() {
+export default function PublicationPage() {
   return (
     <AuthProvider>
       <NotificationProvider>
         <main className="flex">
-          <Dashboard />
+          <Notification />
         </main>
       </NotificationProvider>
     </AuthProvider>

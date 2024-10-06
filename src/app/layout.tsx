@@ -1,7 +1,8 @@
-
+"use client"
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -12,10 +13,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ToastProvider>
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
-    </html>
-    </ToastProvider>
+    <NotificationProvider>
+      <ToastProvider>
+        <html lang="en">
+          <body className={inter.className}>{children}</body>
+        </html>
+      </ToastProvider>
+    </NotificationProvider>
   );
 }

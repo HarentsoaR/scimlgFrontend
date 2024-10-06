@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus, Star } from "lucide-react";
 import PublicationModal from "./PublicationModal";
 import NewPublicationModal from "./NewPublicationModal";
 import ApprovalModal from "./ApprovalModal";
@@ -32,7 +32,7 @@ interface Publication {
   id: number;
   title: string;
   content: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review';
+  status: 'pending' | 'accepted' | 'rejected' | 'under_review';
   createdAt: string;
   updatedAt: string;
   user: User;
@@ -47,7 +47,7 @@ export default function Publications() {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
   const [selectedPublication, setSelectedPublication] = useState<Publication | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewPublicationModalOpen, setIsNewPublicationModalOpen] = useState(false);
@@ -194,8 +194,9 @@ export default function Publications() {
   const filteredPublications = publications.filter(pub =>
     (pub.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pub.user.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (statusFilter === 'all' || pub.status === statusFilter)
+    (pub.status === 'accepted')
   );
+  console.log('filters', filteredPublications)
 
   const totalPages = Math.ceil(filteredPublications.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -224,6 +225,45 @@ export default function Publications() {
     };
     setPublications([publication, ...publications]);
   };
+
+  const handleStarRating = async (publicationId: any, rating: any) => {
+    const cookies = parseCookies()
+    const token = cookies.access_token
+    try {
+      await axios.post(`http://localhost:8080/publications/${publicationId}/rate`, { rating }, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      fetchPublications() // Refresh publications to show updated rating
+    } catch (error) {
+      console.error('Error rating publication:', error)
+    }
+  }
+
+  const StarRating = ({ publication }) => {
+    const [hoveredRating, setHoveredRating] = useState(0)
+
+    return (
+      <div className="flex items-center space-x-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`w-5 h-5 cursor-pointer ${star <= (hoveredRating || publication.userRating || 0)
+                ? 'text-yellow-400 fill-yellow-400'
+                : 'text-gray-300'
+              }`}
+            onClick={() => handleStarRating(publication.id, star)}
+            onMouseEnter={() => setHoveredRating(star)}
+            onMouseLeave={() => setHoveredRating(0)}
+          />
+        ))}
+        <span className="text-sm text-muted-foreground ml-2">
+          {publication.averageRating !== undefined
+            ? `(${publication.averageRating.toFixed(1)})`
+            : '(No ratings yet)'}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -289,6 +329,7 @@ export default function Publications() {
                       <p className="text-sm text-muted-foreground">
                         {pub.user.name} • {pub.followerCount === 1 ? `${pub.followerCount} Follower` : `${pub.followerCount} Followers`} • {formatPublicationDate(new Date(pub.createdAt))}
                       </p>
+                      <StarRating publication={pub} />
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleReadClick(pub)}>
                       <BookOpen className="h-4 w-4 mr-2" />

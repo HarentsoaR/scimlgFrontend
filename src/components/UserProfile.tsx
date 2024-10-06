@@ -21,6 +21,10 @@ export default function UserProfile() {
     router.push("/");
   };
 
+  const handleAdmin = () => {
+    router.push("/admin");
+  };
+
   const disconnectUser = async () => {
     const cookies = parseCookies();
     const token = cookies.access_token;
@@ -50,6 +54,12 @@ export default function UserProfile() {
             className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
           >
             Disconnect
+          </button>
+          <button 
+            onClick={handleAdmin} 
+            className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+          >
+            Admin
           </button>
         </div>
       )}
