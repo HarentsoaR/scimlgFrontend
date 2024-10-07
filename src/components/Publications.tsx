@@ -108,12 +108,17 @@ export default function Publications() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
+        const ratingResponse = await axios.get(`http://localhost:8080/evaluations/${pub.id}/rating`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
         return {
           ...pub,
           likes: typeof pub.likes === 'number' ? pub.likes : 0,
           hasLiked: hasLiked.data,
           followerCount: followerCountResponse.data, // Set follower count
-          userStatus: userStatusResponse.data.isActive
+          userStatus: userStatusResponse.data.isActive,
+          averageRating: ratingResponse.data || 0,
         };
       }));
 
@@ -226,30 +231,47 @@ export default function Publications() {
     setPublications([publication, ...publications]);
   };
 
-  const handleStarRating = async (publicationId: any, rating: any) => {
-    const cookies = parseCookies()
-    const token = cookies.access_token
+  const handleStarRating = async (publicationId: any, rating: number) => {
+    const cookies = parseCookies();
+    const token = cookies.access_token;
+
     try {
-      await axios.post(`http://localhost:8080/publications/${publicationId}/rate`, { rating }, {
+      // Check if the user has already rated this publication
+      const existingRatingResponse = await axios.get(`http://localhost:8080/evaluations/user-rating/${publicationId}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      fetchPublications() // Refresh publications to show updated rating
+      });
+      if (existingRatingResponse.data) {
+        // User has already rated, update the existing rating
+        await axios.put(`http://localhost:8080/evaluations/${existingRatingResponse.data.id}`, { rating }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        // User hasn't rated yet, create a new rating
+        const evaluationDto = { rating };
+        await axios.post(`http://localhost:8080/evaluations/${publicationId}/rate`, evaluationDto, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
+      fetchPublications(); // Refresh publications to show updated rating
     } catch (error) {
-      console.error('Error rating publication:', error)
+      console.error('Error rating publication:', error);
     }
-  }
+  };
+
+
 
   const StarRating = ({ publication }) => {
-    const [hoveredRating, setHoveredRating] = useState(0)
+    const [hoveredRating, setHoveredRating] = useState(0);
 
     return (
       <div className="flex items-center space-x-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`w-5 h-5 cursor-pointer ${star <= (hoveredRating || publication.userRating || 0)
-                ? 'text-yellow-400 fill-yellow-400'
-                : 'text-gray-300'
+            className={`w-5 h-5 cursor-pointer ${star <= (hoveredRating || publication.averageRating || 0)
+              ? 'text-yellow-400 fill-yellow-400'
+              : 'text-gray-300'
               }`}
             onClick={() => handleStarRating(publication.id, star)}
             onMouseEnter={() => setHoveredRating(star)}
@@ -262,8 +284,8 @@ export default function Publications() {
             : '(No ratings yet)'}
         </span>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className="space-y-4">
