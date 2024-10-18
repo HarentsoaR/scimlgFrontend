@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Plus, Star } from "lucide-react";
 import PublicationModal from "./PublicationModal";
@@ -15,7 +14,7 @@ import ApprovalModal from "./ApprovalModal";
 import { parseCookies } from "nookies";
 import { HeartIcon } from 'lucide-react';
 import { ProfileModal } from "./ProfileModal";
-import { ScrollBar } from "./ui/custom-scrollbar";
+import { ScrollBar, ScrollArea } from "./ui/custom-scrollbar";
 
 interface User {
   id: number;
@@ -380,7 +379,7 @@ export default function Publications() {
             <ScrollBar />
           </ScrollArea>
 
-          <div className="flex justify-between items-center mt-4">
+          {/* <div className="flex justify-between items-center mt-4">
             <Button
               variant="outline"
               size="sm"
@@ -402,7 +401,7 @@ export default function Publications() {
               Next
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
       <PublicationModal

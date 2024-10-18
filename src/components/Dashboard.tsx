@@ -17,7 +17,6 @@ import { useAuth } from "@/context/AuthContext";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { ProfileModal } from "./ProfileModal";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useNotificationContext } from "@/context/NotificationContext";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -32,6 +31,8 @@ export default function Dashboard() {
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState("");
 
   function formatPublicationDate(publicationDate: Date): string {
     const now = new Date();
@@ -138,7 +139,13 @@ export default function Dashboard() {
         }));
 
         publicationsWithDetails.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setPublications(publicationsWithDetails);
+
+        const filteredPublications = publicationsWithDetails.filter(pub =>
+          (pub.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            pub.user.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
+          (pub.status === 'accepted')
+        );
+        setPublications(filteredPublications);
       } catch (error) {
         console.error('Error fetching publications:', error);
       }

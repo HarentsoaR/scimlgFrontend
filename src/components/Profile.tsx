@@ -31,6 +31,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import PublicationModal from "./PublicationModal";
+import UpdateModal from "./UpdateModal";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }).max(30),
@@ -52,6 +54,19 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast()
   const [error, setError] = useState('');
+
+  const [selectedPublication, setSelectedPublication] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openModal = (publication) => {
+    setSelectedPublication(publication);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPublication(null);
+  };
 
   const cookies = parseCookies();
   const token = cookies.access_token;
@@ -254,9 +269,13 @@ export default function Profile() {
                   <div>{error}</div>
                 ) : (
                   publications.map((pub) => (
-                    <div key={pub.id} className="mb-4 p-4 border-b last:border-b-0">
+                    <div
+                      key={pub.id}
+                      className="mb-4 p-4 border-b last:border-b-0 cursor-pointer"
+                      onClick={() => openModal(pub)} // Open modal on click
+                    >
                       <h3 className="font-semibold">{pub.title}</h3>
-                      <p className="text-sm text-muted-foreground">{pub.date}</p>
+                      <p className="text-sm text-muted-foreground">{pub.content}</p>
                     </div>
                   ))
                 )}
@@ -268,7 +287,7 @@ export default function Profile() {
         <TabsContent value="connections">
           <Card>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid md:grid-cols-2 sm:grid-cols-2">
                 <div>
                   <h3 className="font-semibold text-lg mb-4">Followers</h3>
                   <ScrollArea className="h-[300px]">
@@ -335,6 +354,12 @@ export default function Profile() {
           </Card>
         </TabsContent>
       </Tabs>
+      <UpdateModal
+        publication={selectedPublication}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        token={token}
+      />
     </div>
   );
 }
