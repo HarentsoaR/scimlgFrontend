@@ -2,35 +2,97 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import Chart from 'react-apexcharts';
 import axios from 'axios';
 import { parseCookies } from 'nookies';
 
 const AdminStatistics = () => {
-  const [stats, setStats] = useState({
-    userCount: 0,
-    publicationCount: 0,
-    dailyActiveUsers: [],
-    publicationsPerDay: [],
-  });
+  const [userCount, setUserCount] = useState(0);
+  const [publicationCount, setPublicationCount] = useState(0);
+  const [mostLikedArticles, setMostLikedArticles] = useState([]);
 
+  // Fetch user count
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchUserCount = async () => {
       const cookies = parseCookies();
       const token = cookies.access_token;
 
       try {
-        const response = await axios.get('http://localhost:8080/admin/statistics', {
+        const response = await axios.get('http://localhost:8080/users/statistics/count', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setStats(response.data);
+        setUserCount(response.data);
       } catch (error) {
-        console.error('Error fetching statistics:', error);
+        console.error('Error fetching user count:', error);
       }
     };
 
-    fetchStats();
+    fetchUserCount();
   }, []);
+
+  // Fetch publication count
+  useEffect(() => {
+    const fetchPublicationCount = async () => {
+      const cookies = parseCookies();
+      const token = cookies.access_token;
+
+      try {
+        const response = await axios.get('http://localhost:8080/articles/statistics/count', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPublicationCount(response.data);
+      } catch (error) {
+        console.error('Error fetching publication count:', error);
+      }
+    };
+
+    fetchPublicationCount();
+  }, []);
+
+  // Fetch most liked articles
+  useEffect(() => {
+    const fetchMostLikedArticles = async () => {
+      const cookies = parseCookies();
+      const token = cookies.access_token;
+
+      try {
+        const response = await axios.get('http://localhost:8080/likes/statistics/most-liked', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setMostLikedArticles(response.data);
+      } catch (error) {
+        console.error('Error fetching most liked articles:', error);
+      }
+    };
+
+    fetchMostLikedArticles();
+  }, []);
+
+  // Prepare data for ApexCharts
+  const prepareChartData = (data) => {
+    const titles = data.map(article => article.title);
+    const likeCounts = data.map(article => article.likeCount);
+
+    return {
+      series: [{
+        name: 'Likes',
+        data: likeCounts,
+      }],
+      options: {
+        chart: {
+          type: 'bar',
+        },
+        xaxis: {
+          categories: titles,
+        },
+        title: {
+          text: 'Most Liked Articles',
+        },
+      },
+    };
+  };
+
+  const mostLikedArticlesChartData = prepareChartData(mostLikedArticles);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -39,7 +101,7 @@ const AdminStatistics = () => {
           <CardTitle>Total Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.userCount}</div>
+          <div className="text-2xl font-bold">{userCount}</div>
         </CardContent>
       </Card>
       <Card>
@@ -47,45 +109,24 @@ const AdminStatistics = () => {
           <CardTitle>Total Publications</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.publicationCount}</div>
+          <div className="text-2xl font-bold">{publicationCount}</div>
         </CardContent>
       </Card>
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle>Daily Active Users</CardTitle>
+          <CardTitle>Most Liked Articles</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats.dailyActiveUsers}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-      <Card className="col-span-2">
-        <CardHeader>
-          <CardTitle>Publications Per Day</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats.publicationsPerDay}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#82ca9d" />
-            </BarChart>
-          </ResponsiveContainer>
+          <Chart
+            options={mostLikedArticlesChartData.options}
+            series={mostLikedArticlesChartData.series}
+            type="bar"
+            height={300}
+          />
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default AdminStatistics; // Ensure this is a default export
+export default AdminStatistics;

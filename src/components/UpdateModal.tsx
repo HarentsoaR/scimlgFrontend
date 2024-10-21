@@ -1,4 +1,3 @@
-// UpdateModal.js
 import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 const updatePublicationSchema = z.object({
   title: z.string().min(2, { message: "Title is required." }),
-  content: z.string().min(2, {message : "Desciption is required"}),
+  content: z.string().min(2, { message: "Description is required" }),
 });
 
 type UpdatePublicationValues = z.infer<typeof updatePublicationSchema>;
@@ -22,7 +21,7 @@ const UpdateModal = ({ publication, isOpen, onClose, token }) => {
   const { toast } = useToast();
   const form = useForm<UpdatePublicationValues>({
     resolver: zodResolver(updatePublicationSchema),
-    defaultValues: publication || { title: "", content: ""},
+    defaultValues: publication || { title: "", content: "" },
   });
 
   useEffect(() => {
@@ -41,6 +40,22 @@ const UpdateModal = ({ publication, isOpen, onClose, token }) => {
     } catch (error) {
       console.error("Failed to update publication:", error);
       toast({ title: "Update failed", description: "There was an error updating your publication.", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm("Are you sure you want to delete this publication?");
+    if (confirmed) {
+      try {
+        await axios.delete(`http://localhost:8080/articles/${publication.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        toast({ title: "Publication deleted", description: "Your publication has been successfully deleted." });
+        onClose();
+      } catch (error) {
+        console.error("Failed to delete publication:", error);
+        toast({ title: "Delete failed", description: "There was an error deleting your publication.", variant: "destructive" });
+      }
     }
   };
 
@@ -73,7 +88,10 @@ const UpdateModal = ({ publication, isOpen, onClose, token }) => {
                 <FormMessage />
               </FormItem>
             )} />
-            <Button type="submit">Save Changes</Button>
+            <div className="flex justify-between">
+              <Button variant="default" type="submit">Save</Button>
+              <Button variant="error" onClick={handleDelete}>Delete</Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
