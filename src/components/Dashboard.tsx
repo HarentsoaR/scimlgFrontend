@@ -335,8 +335,8 @@ export default function Dashboard() {
 
                         content = (
                           <p className="text-sm">
-                              {username}{""}
-                            liked your article:
+                              {username}{" "}
+                            liked your article: {" "}
                             <span
                               onClick={() => ArticleLink(articleTitle, notification.id)}
                               className="text-blue-500 hover:underline cursor-pointer"
