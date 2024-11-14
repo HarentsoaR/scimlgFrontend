@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, Home, User, Menu, BookOpen, Compass, Grid, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,7 @@ export default function Notification() {
     const [currentView, setCurrentView] = useState('home');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    var [selectedUserId] = useState(null)
+    const selectedUserId = useRef(null);
 
     function formatPublicationDate(publicationDate: Date): string {
         const now = new Date();

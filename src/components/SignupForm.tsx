@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { CheckCircle2, XCircle, Eye, EyeOff } from "lucide-react";
+import Image from 'next/image';
 
 interface ValidationItemProps {
   isValid: boolean;
@@ -88,10 +89,12 @@ export default function SignupForm() {
     <Card className="w-full max-w-5xl mx-auto bg-background/95 shadow-lg rounded-lg p-4">
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center justify-center space-x-4">
-          <img
+          <Image
             src="/assets/images/sci-logo.png"
             alt="Malagasy Science Logo"
             className="h-12 w-12"
+            width={48} // Set the width according to your design
+            height={48} // Set the height according to your design
           />
           <div>
             <CardTitle className="text-xl font-bold">Malagasy Science</CardTitle>

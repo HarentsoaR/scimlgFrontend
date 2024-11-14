@@ -14,6 +14,6 @@ export function middleware(request: NextRequest) {
   // // Allow access if token is present or if accessing login/signup pages
   // return NextResponse.next();
 }
-export const config = {
-  matcher: ['/dashboard/:path*', '/profile/:path*', '/settings/:path*'], // Add protected routes here
-};
+// export const config = {
+//   matcher: ['/dashboard/:path*', '/profile/:path*', '/settings/:path*'], // Add protected routes here
+// };
