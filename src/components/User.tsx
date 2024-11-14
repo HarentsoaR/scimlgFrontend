@@ -37,7 +37,7 @@ export default function Notification() {
     const [currentView, setCurrentView] = useState('home');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const selectedUserId = useRef(null);
+    var selectedUserId = useRef(null);
 
     function formatPublicationDate(publicationDate: Date): string {
         const now = new Date();
